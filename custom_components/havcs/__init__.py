@@ -31,7 +31,11 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.network import get_url
 from homeassistant import config as conf_util
-from homeassistant.setup import SetupPhases, async_pause_setup
+from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
+try:
+    from homeassistant.setup import SetupPhases, async_pause_setup
+except:
+    pass
 
 
 
@@ -626,13 +630,20 @@ async def async_setup_entry(hass, config_entry):
                     hass.config_entries.async_update_entry(entry)
 
             # await async_load_device_info()
+            def import_module(platform):
+                module = importlib.import_module('custom_components.{}.{}'.format(DOMAIN,platform))
+                _LOGGER.info("[post-task] import %s.%s", DOMAIN, platform)
+                return module
 
             for platform in platforms:
                 for ent in hass.config_entries.async_entries(DOMAIN):
                     if ent.source == SOURCE_PLATFORM and ent.data.get('platform') == platform:
                         try:
-                            module = importlib.import_module('custom_components.{}.{}'.format(DOMAIN,platform))
-                            _LOGGER.info("[post-task] import %s.%s", DOMAIN, platform)
+                            if MAJOR_VERSION >= 2024 and MINOR_VERSION > 5:
+                                with async_pause_setup(hass, SetupPhases.WAIT_IMPORT_PLATFORMS):
+                                    module = await hass.async_add_import_executor_job(import_module, platform)
+                            else:
+                                module = import_module(platform)
                             hass.data[DOMAIN][DATA_HAVCS_HANDLER][platform] = await module.createHandler(hass, ent)
                             # hass.data[DOMAIN][DATA_HAVCS_HANDLER][platform].vcdm.all(hass, True)
                         except ImportError as err:
@@ -642,9 +653,7 @@ async def async_setup_entry(hass, config_entry):
                             _LOGGER.error("[post-task] fail to create %s handler: %s", platform , traceback.format_exc())
                             return False
                         break
-        with async_pause_setup(hass, SetupPhases.WAIT_IMPORT_PLATFORMS):
-            await hass.async_add_import_executor_job(async_init_sub_entry)
-            # await async_init_sub_entry()
+        await async_init_sub_entry()
 
         if DATA_HAVCS_MQTT in hass.data[DOMAIN]:
             await hass.data[DOMAIN][DATA_HAVCS_MQTT].async_publish("ai-home/http2mqtt2hass/"+app_key+"/response/test", 'init', 2, False)

@@ -19,6 +19,7 @@ from homeassistant.components.http import HomeAssistantView
 from homeassistant.components.frontend import DATA_PANELS
 from .const import DATA_HAVCS_HANDLER, INTEGRATION, DATA_HAVCS_ITEMS, CONF_DEVICE_CONFIG_PATH, DATA_HAVCS_SETTINGS, CONF_SETTINGS_CONFIG_PATH, DATA_HAVCS_CONFIG, HAVCS_SERVICE_URL, CLIENT_PALTFORM_DICT, DEVICE_TYPE_DICT, DEVICE_PLATFORM_DICT, DEVICE_ATTRIBUTE_DICT, DEVICE_ACTION_DICT
 from . import util as havcs_util
+from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
 
 from multidict import MultiDict
 
@@ -46,7 +47,10 @@ class HavcsServiceView(HomeAssistantView):
             platform = havcs_util.get_platform_from_command(data)
             auth_value = havcs_util.get_token_from_command(data)
             _LOGGER.debug("[%s] get access_token >>> %s <<<", LOGGER_NAME, auth_value)
-            refresh_token = await self._hass.auth.async_validate_access_token(auth_value)
+            if MAJOR_VERSION >= 2024 and MINOR_VERSION > 1:
+                refresh_token = self._hass.auth.async_validate_access_token(auth_value)
+            else:
+                refresh_token = await self._hass.auth.async_validate_access_token(auth_value)
             if refresh_token:
                 _LOGGER.debug("[%s] validate access_token, get refresh_token(id = %s)", LOGGER_NAME, refresh_token.id)
             else:
