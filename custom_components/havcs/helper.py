@@ -1,4 +1,3 @@
-
 import copy
 import voluptuous as vol
 import asyncio
@@ -6,12 +5,15 @@ import logging
 import traceback
 
 from homeassistant.exceptions import ServiceNotFound
-from homeassistant.helpers.state import AsyncTrackStates
 from homeassistant.core import HomeAssistant, Context
+from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
 
 from .const import DATA_HAVCS_SETTINGS, INTEGRATION, DATA_HAVCS_ITEMS, ATTR_DEVICE_VISABLE, ATTR_DEVICE_ID, ATTR_DEVICE_ENTITY_ID, ATTR_DEVICE_TYPE, ATTR_DEVICE_NAME, ATTR_DEVICE_ZONE, ATTR_DEVICE_ATTRIBUTES, ATTR_DEVICE_ACTIONS, ATTR_DEVICE_PROPERTIES
 from .device import VoiceControllDevice
-
+try:
+    from homeassistant.helpers import device_registry as dr
+except:
+    pass
 
 _LOGGER = logging.getLogger(__name__)
 LOGGER_NAME = 'helper'
@@ -31,12 +33,12 @@ class VoiceControlProcessor:
 
     def _discovery_process_device_info(self, device_id, device_type, device_name, zone, properties, actions) -> None:
         raise NotImplementedError()
-  
+
     def _control_process_propertites(self, device_properties, action) -> None:
         raise NotImplementedError()
 
     def _query_process_propertites(self, device_properties, action) -> None:
-        raise NotImplementedError()  
+        raise NotImplementedError()
 
     def _prase_action_p2h(self, action) -> None:
         for k,v in self.vcdm.device_action_map_h2p.items():
@@ -54,7 +56,7 @@ class VoiceControlProcessor:
 
     def _prase_command(self, command, arg) -> None:
         raise NotImplementedError()
-    
+
     def _errorResult(self, errorCode, messsage=None) -> None:
         raise NotImplementedError()
 
@@ -105,7 +107,8 @@ class VoiceControlProcessor:
                 _LOGGER.debug("[%s] %s : domain = %s, servcie = %s, data = %s", LOGGER_NAME, i, domain_list[i], service_list[i], data_list[i])
 
                 try:
-                    result = await self._hass.services.async_call(domain_list[i], service_list[i], data_list[i], blocking=True, context = CONTEXT)
+                    result = await self._hass.services.async_call(
+                        domain_list[i], service_list[i], data_list[i], blocking=True, context=CONTEXT)
                 except (vol.Invalid, ServiceNotFound):
                     _LOGGER.error("[%s] %s : failed to call service\n%s", LOGGER_NAME, i, traceback.format_exc())
                 else:
@@ -148,7 +151,8 @@ class VoiceControlProcessor:
                 for i in range(len(domain_list)):
                     _LOGGER.debug("[%s] %s @task_%s: domain = %s, servcie = %s, data = %s", LOGGER_NAME, entity_id, i, domain_list[i], service_list[i], data_list[i])
                     try:
-                        result = await self._hass.services.async_call(domain_list[i], service_list[i], data_list[i], blocking=True, context = CONTEXT)
+                        result = await self._hass.services.async_call(
+                            domain_list[i], service_list[i], data_list[i], blocking=True, context=CONTEXT)
                     except (vol.Invalid, ServiceNotFound):
                         _LOGGER.error("[%s] %s @task_%s: failed to call service\n%s", LOGGER_NAME, entity_id, i, traceback.format_exc())
                     else:
@@ -163,9 +167,10 @@ class VoiceControlProcessor:
                             changed_states.append(state)
                     _LOGGER.debug("[%s] %s @task_%s: changed_states = %s", LOGGER_NAME, entity_id, i, changed_states)
                 _LOGGER.debug("[%s] ---excute tasks of %s: end", LOGGER_NAME, entity_id)
-        if not success_task:
-            _LOGGER.debug("[%s] fail to control device, return 'IOT_DEVICE_OFFLINE' message.", LOGGER_NAME)
-            return self._errorResult('IOT_DEVICE_OFFLINE'), None
+        # FIXME: 检查状状态是否与意图一致
+        # if not success_task:
+            # _LOGGER.debug("[%s] fail to control device, return 'IOT_DEVICE_OFFLINE' message.", LOGGER_NAME)
+            # return self._errorResult('IOT_DEVICE_OFFLINE'), None
         # wait 1s for updating state of entity
         await asyncio.sleep(1)
         device_properties = self.vcdm.get(device_id).properties
@@ -221,7 +226,7 @@ class VoiceControlDeviceManager:
     def get(self, device_id: str, hass: HomeAssistant = None, raw_attributes: dict = None) -> dict:
         if raw_attributes is None:
             return self._devices_cache.get(device_id)
-       
+
         device_name = raw_attributes.get(ATTR_DEVICE_NAME)
         device_type = None
         zone = None
@@ -235,12 +240,12 @@ class VoiceControlDeviceManager:
             device_name = self.get_device_name(hass, entity_id, raw_attributes, self._places, self._device_name_constraints) if device_name is None else device_name
             device_type = self.get_device_type(hass, entity_id, raw_attributes, device_name) if device_type is None else device_type
             zone = self.get_device_zone(hass, entity_id, raw_attributes, self._places, self._zone_constraints) if zone is None else zone
-            properties += self.get_device_properties(hass, entity_id, raw_attributes)         
+            properties += self.get_device_properties(hass, entity_id, raw_attributes)
             actions += self.get_device_actions(hass, entity_id, raw_attributes, device_type)
 
-        actions = list(set(actions))            
+        actions = list(set(actions))
         # properties = list(set(properties))
-            
+
         attributes = {
             ATTR_DEVICE_ID: device_id,
             ATTR_DEVICE_ENTITY_ID: entity_ids,
@@ -262,7 +267,10 @@ class VoiceControlDeviceManager:
 
     async def async_reregister_devices(self, hass = None):
         # entity_registry = await hass.helpers.entity_registry.async_get_registry()
-        device_registry = await hass.helpers.device_registry.async_get_registry()
+        if MAJOR_VERSION >= 2024 and MINOR_VERSION > 5:
+            device_registry = dr.async_get(hass)
+        else:
+            device_registry = hass.helpers.device_registry.async_get(hass)
         device_registry.async_clear_config_entry(self._entry.entry_id)
         for device in self._devices_cache.values():
             await device.async_update_device_registry()
@@ -338,7 +346,7 @@ class VoiceControlDeviceManager:
                     if alias in device_name:
                         probably_device_names += [alias]
             return max(probably_device_names) if probably_device_names else None
-            
+
         return device_name
 
     def get_device_zone(self, hass, entity_id, raw_attributes, places = [], zone_constraints = []) ->str:
@@ -358,7 +366,7 @@ class VoiceControlDeviceManager:
                         zone = place
                         break
         if zone == '未指定':
-            # Guess from HomeAssistant group which contains entity 
+            # Guess from HomeAssistant group which contains entity
             for state in hass.states.async_all():
                 group_entity_id = state.entity_id
                 if group_entity_id.startswith('group.') and not group_entity_id.startswith('group.all_') and group_entity_id != 'group.default_view':
@@ -405,7 +413,7 @@ class VoiceControlDeviceManager:
         else:
             properties = [{'entity_id': entity_id, 'attribute': 'power_state'}]
         return properties
-    
+
     def get_property_related_entity_id(self, attribute, properties):
         for device_property in properties:
             if attribute == device_property.get('attribute'):
@@ -437,7 +445,7 @@ class VoiceControlDeviceManager:
         elif device_type == 'vacuum':
             actions = ["turn_on", "turn_off", "timing_turn_on", "timing_turn_off"]
         elif device_type == 'sensor':
-            actions = self.get_sensor_actions_from_properties(self.get_device_properties(hass, entity_id, raw_attributes))  
+            actions = self.get_sensor_actions_from_properties(self.get_device_properties(hass, entity_id, raw_attributes))
         elif entity_id.startswith('switch.'):
             actions = ["turn_on", "turn_off", "timing_turn_on", "timing_turn_off"]
         elif entity_id.startswith('light.'):
@@ -447,11 +455,10 @@ class VoiceControlDeviceManager:
         elif entity_id.startswith('vacuum.'):
             actions = ["turn_on", "turn_off", "timing_turn_on", "timing_turn_off"]
         elif entity_id.startswith('sensor.'):
-            actions = self.get_sensor_actions_from_properties(self.get_device_properties(hass, entity_id, raw_attributes))  
+            actions = self.get_sensor_actions_from_properties(self.get_device_properties(hass, entity_id, raw_attributes))
         else:
             actions = ["turn_on", "turn_off", "timing_turn_on", "timing_turn_off"]
         return actions
-    
+
     def get_sensor_actions_from_properties(self, properties) -> list:
         return [ 'query_' + device_property.get('attribute') for device_property in properties]
-    

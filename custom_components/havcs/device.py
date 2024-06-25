@@ -1,4 +1,9 @@
 from .const import INTEGRATION
+from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
+try:
+    from homeassistant.helpers import device_registry as dr
+except:
+    pass
 
 class VoiceControllDevice:
 
@@ -61,7 +66,11 @@ class VoiceControllDevice:
 
     async def async_update_device_registry(self):
         """Update device registry."""
-        device_registry = await self.hass.helpers.device_registry.async_get_registry()
+        # device_registry = await self.hass.helpers.device_registry.async_get_registry()
+        if MAJOR_VERSION >= 2024 and MINOR_VERSION > 5:
+            device_registry = dr.async_get(self.hass)
+        else:
+            device_registry = self.hass.helpers.device_registry.async_get(self.hass)
         device = device_registry.async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
             connections={('CONNECTION_NETWORK_MAC', self.serial)},
@@ -72,7 +81,7 @@ class VoiceControllDevice:
             sw_version=self.sw_version,
         )
         self._id = device.id
-    
+
     async def async_setup(self):
-        
+
         return True

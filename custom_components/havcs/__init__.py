@@ -31,6 +31,9 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.network import get_url
 from homeassistant import config as conf_util
+from homeassistant.setup import SetupPhases, async_pause_setup
+
+
 
 
 from . import util as havcs_util
@@ -182,11 +185,11 @@ async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
 
     hass.data.setdefault(DOMAIN, {})
     conf = config.get(DOMAIN)  # type: ConfigType
- 
+
     if conf is None:
         # If we have a config entry, setup is done by that config entry.
         # If there is no config entry, this should fail.
-        return bool(hass.config_entries.async_entries(DOMAIN))     
+        return bool(hass.config_entries.async_entries(DOMAIN))
 
     hass.data[DOMAIN][DATA_HAVCS_CONFIG] = conf
 
@@ -199,7 +202,7 @@ async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass, config_entry):
     """Load a config entry."""
-    
+
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN].setdefault(DATA_HAVCS_HANDLER, {})
     hass.data[DOMAIN].setdefault(DATA_HAVCS_CONFIG, {})
@@ -278,7 +281,7 @@ async def async_setup_entry(hass, config_entry):
             _LOGGER.error("[init] fail to start havcs: skill mode require mqtt congfiguration")
             return False
         MODE.append('skill')
-    
+
     havcs_util.ENTITY_KEY = conf.get(CONF_SETTING, {}).get(CONF_ENTITY_KEY)
     havcs_util.CONTEXT_HAVCS = Context(conf.get(CONF_SETTING, {}).get(CONF_USER_ID))
 
@@ -344,7 +347,7 @@ async def async_setup_entry(hass, config_entry):
         if os.path.exists(certificate):
             mqtt_conf[CONF_CERTIFICATE] = certificate
             _LOGGER.debug("[init] sucess to autoload ca.crt from %s", certificate)
-        
+
         validate_mqtt_conf = mqtt.CONFIG_SCHEMA({'mqtt': mqtt_conf})['mqtt']
         hass.data[DOMAIN][DATA_HAVCS_MQTT] = mqtt.MQTT(
             hass,
@@ -352,7 +355,7 @@ async def async_setup_entry(hass, config_entry):
             mqtt_conf
         )
         _LOGGER.debug("[init] connecting to mqtt server")
-        
+
         await hass.data[DOMAIN][DATA_HAVCS_MQTT].async_connect()  # 没有返回值
 
         retry = 5
@@ -364,7 +367,7 @@ async def async_setup_entry(hass, config_entry):
                 break
             retry -= 1
             _LOGGER.debug("[init] mqtt client not connected yet, check after 5s")
-  
+
         if hass.data[DOMAIN][DATA_HAVCS_MQTT].connected:
             pass
         else:
@@ -375,7 +378,7 @@ async def async_setup_entry(hass, config_entry):
             md5_l.update(by)
             local_ca_md5 = md5_l.hexdigest()
             _LOGGER.debug("[init] local ca.crt md5 %s", local_ca_md5)
-            
+
             try:
                 ca_url = 'https://raw.githubusercontent.com/cnk700i/havcs/master/custom_components/havcs/ca.crt'
                 session = async_get_clientsession(hass, verify_ssl=False)
@@ -486,14 +489,14 @@ async def async_setup_entry(hass, config_entry):
             await hass.data[DOMAIN][DATA_HAVCS_MQTT].async_publish(topic.replace('/request/','/response/'), res, 2, False)
             end_time = datetime.now()
             _LOGGER.debug("[mqtt] -------- mqtt task finish at %s, Running time: %ss --------", end_time.strftime('%Y-%m-%d %H:%M:%S'), (end_time - start_time).total_seconds())
-            
+
         async def async_publish_error(mqtt_msg,topic):
             res = {
                     'headers': {'Content-Type': 'application/json;charset=utf-8'},
                     'status': 404,
                     'content': '',
                     'msgId': mqtt_msg.get('msgId')
-                }                    
+                }
             res = havcs_util.AESCipher(decrypt_key).encrypt(json.dumps(res, ensure_ascii = False).encode('utf8'))
             await hass.data[DOMAIN][DATA_HAVCS_MQTT].async_publish(topic.replace('/request/','/response/'), res, 2, False)
 
@@ -519,10 +522,10 @@ async def async_setup_entry(hass, config_entry):
                 req = json.loads(payload)
                 if req.get('msgType') == 'hello':
                     _LOGGER.info("[mqtt] get hello message: %s", req.get('content'))
-                    end_time = datetime.now() 
+                    end_time = datetime.now()
                     _LOGGER.debug("[mqtt] -------- mqtt task finish at %s, Running time: %ss --------", end_time.strftime('%Y-%m-%d %H:%M:%S'), (end_time - start_time).total_seconds())
                     return
-                
+
                 _LOGGER.debug("[mqtt] raw message: %s", req)
                 if req.get('platform') == 'h2m2h':
                     if('http_proxy' not in MODE):
@@ -536,7 +539,7 @@ async def async_setup_entry(hass, config_entry):
                 else:
                     if('skill' not in MODE):
                         _LOGGER.info("[skill] havcs not run in skill mode, ignore request: %s", req)
-                        raise RuntimeError 
+                        raise RuntimeError
                     hass.add_job(async_module_handler(req, topic, start_time))
 
             except (json.decoder.JSONDecodeError, UnicodeDecodeError, binascii.Error):
@@ -550,7 +553,7 @@ async def async_setup_entry(hass, config_entry):
             except:
                 _LOGGER.error("[mqtt] fail to handle %s", traceback.format_exc())
                 end_time = datetime.now()
-            if end_time:    
+            if end_time:
                 _LOGGER.debug("[mqtt] -------- mqtt task finish at %s, Running time: %ss --------", end_time.strftime('%Y-%m-%d %H:%M:%S'), (end_time - start_time).total_seconds())
 
         await hass.data[DOMAIN][DATA_HAVCS_MQTT].async_subscribe("ai-home/http2mqtt2hass/"+app_key+"/request/#", message_received, 2, 'utf-8')
@@ -564,7 +567,7 @@ async def async_setup_entry(hass, config_entry):
                     conf_util.load_yaml_config_file, havc_settings_config_path
                 )
                 hass.data[DOMAIN][DATA_HAVCS_SETTINGS] = SETTINGS_CONFIG_SCHEMA(settings_config)
-                
+
             except HomeAssistantError as err:
                 _LOGGER.error("Error loading %s: %s", havc_settings_config_path, err)
                 return None
@@ -639,13 +642,15 @@ async def async_setup_entry(hass, config_entry):
                             _LOGGER.error("[post-task] fail to create %s handler: %s", platform , traceback.format_exc())
                             return False
                         break
-        await async_init_sub_entry()
+        with async_pause_setup(hass, SetupPhases.WAIT_IMPORT_PLATFORMS):
+            await hass.async_add_import_executor_job(async_init_sub_entry)
+            # await async_init_sub_entry()
 
         if DATA_HAVCS_MQTT in hass.data[DOMAIN]:
             await hass.data[DOMAIN][DATA_HAVCS_MQTT].async_publish("ai-home/http2mqtt2hass/"+app_key+"/response/test", 'init', 2, False)
 
         async def async_handler_service(service):
-    
+
             if service.service == SERVICE_RELOAD:
                 await async_load_device_info()
                 for platform in hass.data[DOMAIN][DATA_HAVCS_HANDLER]:
@@ -707,7 +712,7 @@ async def async_unload_entry(hass, config_entry):
             hass.components.frontend.async_remove_panel(DOMAIN+'_panel')
             if not hass.data[DOMAIN]:
                 hass.data.pop(DOMAIN)
-            
+
         return unload_ok
 
     elif config_entry.source == SOURCE_PLATFORM:
@@ -715,8 +720,3 @@ async def async_unload_entry(hass, config_entry):
             if config_entry.data['platform'] in entry.data['platform']:
                 entry.data['platform'].remove(config_entry.data['platform'])
         return True
-
-
-
-
-

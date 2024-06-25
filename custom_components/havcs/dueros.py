@@ -146,7 +146,7 @@ class PlatformParameter:
             'TurnOnRequest': lambda state, attributes, payload:([cmnd[0] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['turn_on']], [cmnd[1] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['turn_on']], [json.loads(cmnd[2]) for cmnd in attributes[ATTR_DEVICE_ACTIONS]['turn_on']]) if attributes.get(ATTR_DEVICE_ACTIONS) else (['input_boolean'], ['turn_on'], [{}]),
             'TurnOffRequest': lambda state, attributes, payload:([cmnd[0] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['turn_off']], [cmnd[1] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['turn_off']], [json.loads(cmnd[2]) for cmnd in attributes[ATTR_DEVICE_ACTIONS]['turn_off']]) if attributes.get(ATTR_DEVICE_ACTIONS) else (['input_boolean'], ['turn_off'], [{}]),
             'IncrementBrightnessPercentageRequest': lambda state, attributes, payload:([cmnd[0] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['increase_brightness']], [cmnd[1] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['increase_brightness']], [json.loads(cmnd[2]) for cmnd in attributes[ATTR_DEVICE_ACTIONS]['increase_brightness']]) if attributes.get(ATTR_DEVICE_ACTIONS) else (['input_boolean'], ['turn_on'], [{}]),
-            'DecrementBrightnessPercentageRequest': lambda state, attributes, payload:([cmnd[0] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['decrease_brightness']], [cmnd[1] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['decrease_brightness']], [json.loads(cmnd[2]) for cmnd in attributes[ATTR_DEVICE_ACTIONS]['decrease_brightness']]) if attributes.get(ATTR_DEVICE_ACTIONS) else (['input_boolean'], ['turn_on'], [{}]),                 
+            'DecrementBrightnessPercentageRequest': lambda state, attributes, payload:([cmnd[0] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['decrease_brightness']], [cmnd[1] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['decrease_brightness']], [json.loads(cmnd[2]) for cmnd in attributes[ATTR_DEVICE_ACTIONS]['decrease_brightness']]) if attributes.get(ATTR_DEVICE_ACTIONS) else (['input_boolean'], ['turn_on'], [{}]),
             'TimingTurnOnRequest': lambda state, attributes, payload: (['common_timer'], ['set'], [{'operation': 'custom:havcs_actions/timing_turn_on', 'duration': int(payload['timestamp']['value']) - int(time.time())}]),
             'TimingTurnOffRequest': lambda state, attributes, payload: (['common_timer'], ['set'], [{'operation': 'custom:havcs_actions/timing_turn_off', 'duration': int(payload['timestamp']['value']) - int(time.time())}]),
         }
@@ -171,7 +171,7 @@ class VoiceControlDueros(PlatformParameter, VoiceControlProcessor):
             'INVALIDATE_PARAMS': 'ValueOutOfRangeError',
             'DEVICE_IS_NOT_EXIST': 'DriverInternalError',
             'IOT_DEVICE_OFFLINE': 'TargetOfflineError',
-            'ACCESS_TOKEN_INVALIDATE': 'InvalidAccessTokenError'            
+            'ACCESS_TOKEN_INVALIDATE': 'InvalidAccessTokenError'
         }
         messages = {
             'INVALIDATE_CONTROL_ORDER': 'invalidate control order',
@@ -198,6 +198,7 @@ class VoiceControlDueros(PlatformParameter, VoiceControlProcessor):
         if auth:
             namespace = header['namespace']
             if namespace == 'DuerOS.ConnectedHome.Discovery':
+                _LOGGER.info("DISCOVERY DEVICES")
                 action = 'DiscoverAppliancesResponse'
                 err_result, discovery_devices, entity_ids = self.process_discovery_command(request_from)
                 result = {'discoveredAppliances': discovery_devices}
@@ -215,7 +216,7 @@ class VoiceControlDueros(PlatformParameter, VoiceControlProcessor):
                 result = self._errorResult('SERVICE_ERROR')
         else:
             result = self._errorResult('ACCESS_TOKEN_INVALIDATE')
-        
+
         # Check error
         header['name'] = action
         if 'errorCode' in result:
@@ -279,9 +280,9 @@ class VoiceControlDueros(PlatformParameter, VoiceControlProcessor):
                     _LOGGER.warning("[%s] %s has unsport attribute %s", LOGGER_NAME, device_property.get('entity_id'), name)
                     continue
                 properties += [{'name': name, 'value': value, 'scale': scale, 'timestampOfSample': int(time.time()), 'uncertaintyInMilliseconds': 1000, 'legalValue': legalValue }]
-                
+
         return properties if properties else [{'name': 'turnOnState', 'value': 'OFF', 'scale': '', 'timestampOfSample': int(time.time()), 'uncertaintyInMilliseconds': 1000, 'legalValue': '(ON, OFF)' }]
-        
+
     def _discovery_process_actions(self, device_properties, raw_actions):
         actions = []
         for device_property in device_properties:
@@ -317,7 +318,7 @@ class VoiceControlDueros(PlatformParameter, VoiceControlProcessor):
 
 
     def _control_process_propertites(self, device_properties, action) -> None:
-        
+
         return self._discovery_process_propertites(device_properties)
 
     def _query_process_propertites(self, device_properties, action) -> None:
@@ -334,7 +335,7 @@ class VoiceControlDueros(PlatformParameter, VoiceControlProcessor):
                 if value:
                     if device_property.get('attribute').lower() in action.lower():
                         name = action[0].lower() + action[1:]
-                        formattd_property = {name: {'value': value}}  
+                        formattd_property = {name: {'value': value}}
                         properties.update(formattd_property)
         return properties
 
