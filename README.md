@@ -4,6 +4,8 @@
 - HA版本迭代较快，无法保证一一适配，进行功能更新会使用新版本HA进行测试
 - 建议使用版本： 2021.5.4
 ## 更新日志
+- 2025-01-04:
+  1. 适配 home assistant 2024.09
 - 2021-05-26
   1. HA 2021.5.4版本测试
   2. 测试小度音箱平台定时任务逻辑有调整：之前是平台发送定时指令，由插件定时触发；现在是平台定时后发送控制指令
@@ -128,5 +130,3 @@
 [1]: https://github.com/cnk700i/havcs/releases "历史版本"
 [2]: https://ljr.im/articles/plugins-havcs-edible-instructions/ "【插件】HAVCS食用说明"
 [3]: https://ljr.im/articles/home-assistant-novice-question-set/#3-%E8%B0%83%E8%AF%95%E5%8F%8A%E6%9F%A5%E7%9C%8B%E7%A8%8B%E5%BA%8F%E8%BF%90%E8%A1%8C%E6%97%A5%E5%BF%97 "调试及查看程序运行日志"
-
-
