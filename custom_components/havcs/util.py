@@ -7,6 +7,12 @@ import jwt
 from typing import cast
 import logging
 from packaging import version
+from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
+try:
+    from homeassistant.auth import jwt_wrapper
+    from typing import Final
+except:
+    pass
 
 _LOGGER = logging.getLogger(__name__)
 # _LOGGER.setLevel(logging.DEBUG)
@@ -102,8 +108,12 @@ async def async_update_token_expiration(access_token, hass, expiration):
             unverif_claims = jwt.decode(
                 access_token, algorithms=["HS256"], options={"verify_signature": False}
             )
-        # refresh_token = await hass.auth.async_get_refresh_token(cast(str, unverif_claims.get('iss')))
-        refresh_token = hass.auth.async_get_refresh_token(cast(str, unverif_claims.get('iss')))
+        if MAJOR_VERSION >= 2024 and  MINOR_VERSION  > 1:
+            refresh_token = hass.auth.async_get_refresh_token(cast(str, unverif_claims.get('iss')))
+        else:
+            refresh_token = await hass.auth.async_get_refresh_token(cast(str, unverif_claims.get('iss')))
+        if refresh_token is None:
+            return False
         for user in hass.auth._store._users.values():
             if refresh_token.id in user.refresh_tokens and refresh_token.access_token_expiration != expiration:
                 _LOGGER.debug("[util] set new access token expiration for refresh_token[%s]", refresh_token.id)

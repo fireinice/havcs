@@ -107,8 +107,7 @@ class VoiceControlProcessor:
                 _LOGGER.debug("[%s] %s : domain = %s, servcie = %s, data = %s", LOGGER_NAME, i, domain_list[i], service_list[i], data_list[i])
 
                 try:
-                    result = await self._hass.services.async_call(
-                        domain_list[i], service_list[i], data_list[i], blocking=True, context=CONTEXT)
+                    result = await self._hass.services.async_call(domain_list[i], service_list[i], data_list[i], blocking=True, context = CONTEXT)
                 except (vol.Invalid, ServiceNotFound):
                     _LOGGER.error("[%s] %s : failed to call service\n%s", LOGGER_NAME, i, traceback.format_exc())
                 else:
@@ -167,12 +166,11 @@ class VoiceControlProcessor:
                             changed_states.append(state)
                     _LOGGER.debug("[%s] %s @task_%s: changed_states = %s", LOGGER_NAME, entity_id, i, changed_states)
                 _LOGGER.debug("[%s] ---excute tasks of %s: end", LOGGER_NAME, entity_id)
-        # FIXME: 检查状状态是否与意图一致
         # if not success_task:
             # _LOGGER.debug("[%s] fail to control device, return 'IOT_DEVICE_OFFLINE' message.", LOGGER_NAME)
             # return self._errorResult('IOT_DEVICE_OFFLINE'), None
         # wait 1s for updating state of entity
-        await asyncio.sleep(1)
+        # await asyncio.sleep(1)
         device_properties = self.vcdm.get(device_id).properties
         properties = self._control_process_propertites(device_properties, action)
         return None, properties

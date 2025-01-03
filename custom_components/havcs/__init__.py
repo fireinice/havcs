@@ -626,8 +626,14 @@ async def async_setup_entry(hass, config_entry):
                 if entry.data.get('platform') in remove_platforms:
                     await hass.async_create_task(hass.config_entries.async_remove(entry.entry_id))
                 else:
-                    entry.title=f"接入平台[{entry.data.get('platform')}-{DEVICE_PLATFORM_DICT[entry.data.get('platform')]['cn_name']}]，接入方式{mode}"
-                    hass.config_entries.async_update_entry(entry)
+                    title = f"接入平台[{entry.data.get('platform')}-{DEVICE_PLATFORM_DICT[entry.data.get('platform')]['cn_name']}]，接入方式{mode}"
+                    if MAJOR_VERSION > 2023 and MINOR_VERSION > 9:
+                        hass.config_entries.async_update_entry(
+                            entry, title=title)
+                    else:
+                        entry.title = title
+                        hass.config_entries.async_update_entry(entry)
+
 
             # await async_load_device_info()
             def import_module(platform):
@@ -639,7 +645,7 @@ async def async_setup_entry(hass, config_entry):
                 for ent in hass.config_entries.async_entries(DOMAIN):
                     if ent.source == SOURCE_PLATFORM and ent.data.get('platform') == platform:
                         try:
-                            if MAJOR_VERSION >= 2024 and MINOR_VERSION > 5:
+                            if MAJOR_VERSION > 2023 and MINOR_VERSION > 1:
                                 with async_pause_setup(hass, SetupPhases.WAIT_IMPORT_PLATFORMS):
                                     module = await hass.async_add_import_executor_job(import_module, platform)
                             else:
@@ -688,13 +694,13 @@ async def async_setup_entry(hass, config_entry):
 
         if CONF_HTTP in conf or CONF_HTTP_PROXY in conf:
             hass.async_create_task(http_manager.async_check_http_oauth())
+        _LOGGER.info("[init] havcs initialization finished.")
 
     if config_entry.source == config_entries.SOURCE_IMPORT:
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, start_havcs)
     elif config_entry.source == config_entries.SOURCE_USER:
         hass.async_create_task(start_havcs(None))
 
-    _LOGGER.info("[init] havcs initialization finished.")
     return True
 
 async def async_unload_entry(hass, config_entry):
