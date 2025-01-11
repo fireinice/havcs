@@ -1,0 +1,5 @@
+{
+    "name": "Homeassistant Voice Control Skill",
+    "homeassistant": "2025.1",
+    "render_readme": true
+}

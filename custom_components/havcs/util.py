@@ -100,6 +100,7 @@ def get_token_from_command(command):
     result = re.search(r'(?:accessToken|token)[\'\"\s:]+(.*?)[\'\"\s]+(,|\})', command, re.M|re.I)
     return result.group(1) if result else None
 
+
 async def async_update_token_expiration(access_token, hass, expiration):
     try:
         if version.parse(jwt.__version__) < version.parse("2.0.0"):

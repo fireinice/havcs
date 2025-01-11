@@ -417,7 +417,7 @@ class HavcsDeviceView(HomeAssistantView):
         elif action == 'import':
             upload_file = req.get('file')
             try:
-                device_config = yaml.load(upload_file.file, Loader=loader.SafeLineLoader)
+                device_config = yaml.load(upload_file.file, Loader=loader.PythonSafeLoader)
                 self._hass.data[INTEGRATION][DATA_HAVCS_ITEMS] = self._device_schema(device_config)
                 save_yaml(self._hass.data[INTEGRATION][CONF_DEVICE_CONFIG_PATH], self._hass.data[INTEGRATION][DATA_HAVCS_ITEMS])
                 return self.json({ 'code': 'ok', 'Msg': '成功导入设备'})

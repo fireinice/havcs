@@ -20,10 +20,10 @@ async def createHandler(hass, entry):
         placelist_url = 'https://open.bot.tmall.com/oauth/api/placelist'
         aliaslist_url = 'https://open.bot.tmall.com/oauth/api/aliaslist'
         session = async_get_clientsession(hass, verify_ssl=False)
-        with async_timeout.timeout(5, loop=hass.loop):
+        with async_timeout.timeout(5):
             response = await session.get(placelist_url)
         placelist  = (await response.json())['data']
-        with async_timeout.timeout(5, loop=hass.loop):
+        with async_timeout.timeout(5):
             response = await session.get(aliaslist_url)
         aliaslist = (await response.json())['data']
         placelist.append({'key': '电视', 'value': ['电视机']})
@@ -271,7 +271,7 @@ class VoiceControlAligenie(PlatformParameter, VoiceControlProcessor):
                 value = state.state if state else 'unavailable'
                 properties += [{'name': name.lower(), 'value': value}]
         return properties if properties else [{'name': 'powerstate', 'value': 'off'}]
-    
+
     def _discovery_process_actions(self, device_properties, raw_actions):
         actions = []
         for device_property in device_properties:

@@ -70,7 +70,7 @@ class VoiceControllDevice:
         if MAJOR_VERSION >= 2024 and MINOR_VERSION > 5:
             device_registry = dr.async_get(self.hass)
         else:
-            device_registry = self.hass.helpers.device_registry.async_get(self.hass)
+            device_registry = self.hass.helpers.device_registry.async_get()
         device = device_registry.async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
             connections={('CONNECTION_NETWORK_MAC', self.serial)},

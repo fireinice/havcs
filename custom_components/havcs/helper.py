@@ -268,7 +268,7 @@ class VoiceControlDeviceManager:
         if MAJOR_VERSION >= 2024 and MINOR_VERSION > 5:
             device_registry = dr.async_get(hass)
         else:
-            device_registry = hass.helpers.device_registry.async_get(hass)
+            device_registry = hass.helpers.device_registry.async_get()
         device_registry.async_clear_config_entry(self._entry.entry_id)
         for device in self._devices_cache.values():
             await device.async_update_device_registry()

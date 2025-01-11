@@ -1,7 +1,7 @@
 """
 author: cnk700i
 blog: ljr.im
-recommended version HA version: 0.114.4
+recommended version HA version: 2025.1
 """
 
 import asyncio
@@ -290,6 +290,7 @@ async def async_setup_entry(hass, config_entry):
     havcs_util.CONTEXT_HAVCS = Context(conf.get(CONF_SETTING, {}).get(CONF_USER_ID))
 
     platforms = conf.get(CONF_PLATFORM)
+    _LOGGER.info(f"[init] platfroms: {platforms}")
 
     device_config = conf.get(CONF_DEVICE_CONFIG)
     if device_config == 'text':
