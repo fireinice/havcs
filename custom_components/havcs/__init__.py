@@ -22,10 +22,10 @@ import logging
 import traceback
 
 from homeassistant import config_entries
-from homeassistant.core import Event, Context, callback
+from homeassistant.core import Event, Context, callback, HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.components import mqtt
-from homeassistant.helpers.typing import HomeAssistantType, ConfigType
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.const import (CONF_PORT, CONF_PROTOCOL, EVENT_HOMEASSISTANT_START, EVENT_HOMEASSISTANT_STOP, EVENT_STATE_CHANGED, ATTR_ENTITY_ID)
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -185,7 +185,7 @@ SETTINGS_CONFIG_SCHEMA = vol.Schema({
     vol.Optional(ATTR_CONFIG_COMMAND_FILTER, default='none'): vol.Any('http', 'mqtt', 'none')
 },extra=vol.PREVENT_EXTRA)
 
-async def async_setup(hass: HomeAssistantType, config: ConfigType) -> bool:
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     hass.data.setdefault(DOMAIN, {})
     conf = config.get(DOMAIN)  # type: ConfigType
@@ -307,7 +307,7 @@ async def async_setup_entry(hass, config_entry):
             else:
                 with open(havc_device_config_path, "wt") as havc_device_config_file:
                     havc_device_config_file.write('')
-        http_manager.register_deivce_manager()
+        await http_manager.register_device_manager()
     hass.data[DOMAIN][CONF_DEVICE_CONFIG_PATH] = havc_device_config_path
 
     havc_settings_config_path = os.path.join(hass.config.config_dir, 'havcs-settings.yaml')
@@ -628,7 +628,7 @@ async def async_setup_entry(hass, config_entry):
                     await hass.async_create_task(hass.config_entries.async_remove(entry.entry_id))
                 else:
                     title = f"接入平台[{entry.data.get('platform')}-{DEVICE_PLATFORM_DICT[entry.data.get('platform')]['cn_name']}]，接入方式{mode}"
-                    if MAJOR_VERSION > 2023 and MINOR_VERSION > 9:
+                    if (MAJOR_VERSION + 0.01 * MINOR_VERSION) > 2023.09:
                         hass.config_entries.async_update_entry(
                             entry, title=title)
                     else:
@@ -646,7 +646,7 @@ async def async_setup_entry(hass, config_entry):
                 for ent in hass.config_entries.async_entries(DOMAIN):
                     if ent.source == SOURCE_PLATFORM and ent.data.get('platform') == platform:
                         try:
-                            if MAJOR_VERSION > 2023 and MINOR_VERSION > 1:
+                            if (MAJOR_VERSION + 0.01 * MINOR_VERSION) > 2023.01:
                                 with async_pause_setup(hass, SetupPhases.WAIT_IMPORT_PLATFORMS):
                                     module = await hass.async_add_import_executor_job(import_module, platform)
                             else:

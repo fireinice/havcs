@@ -15,8 +15,8 @@ import logging
 
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.components.frontend import DATA_PANELS
+from homeassistant.components.http import HomeAssistantView, StaticPathConfig
+from homeassistant.components.frontend import DATA_PANELS, async_register_built_in_panel
 from .const import DATA_HAVCS_HANDLER, INTEGRATION, DATA_HAVCS_ITEMS, CONF_DEVICE_CONFIG_PATH, DATA_HAVCS_SETTINGS, CONF_SETTINGS_CONFIG_PATH, DATA_HAVCS_CONFIG, HAVCS_SERVICE_URL, CLIENT_PALTFORM_DICT, DEVICE_TYPE_DICT, DEVICE_PLATFORM_DICT, DEVICE_ATTRIBUTE_DICT, DEVICE_ACTION_DICT
 from . import util as havcs_util
 from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
@@ -47,7 +47,7 @@ class HavcsServiceView(HomeAssistantView):
             platform = havcs_util.get_platform_from_command(data)
             auth_value = havcs_util.get_token_from_command(data)
             _LOGGER.debug("[%s] get access_token >>> %s <<<", LOGGER_NAME, auth_value)
-            if MAJOR_VERSION >= 2024 and MINOR_VERSION > 1:
+            if (MAJOR_VERSION + MINOR_VERSION * 0.01) > 2024.01:
                 refresh_token = self._hass.auth.async_validate_access_token(auth_value)
             else:
                 refresh_token = await self._hass.auth.async_validate_access_token(auth_value)
@@ -314,7 +314,8 @@ class HavcsSettingsView(HomeAssistantView):
                 try:
                     valid_settings = self._settings_schema(settings)
                     self._hass.data[INTEGRATION][DATA_HAVCS_SETTINGS].update(settings)
-                    save_yaml(self._hass.data[INTEGRATION][CONF_SETTINGS_CONFIG_PATH], self._hass.data[INTEGRATION][DATA_HAVCS_SETTINGS])
+                    await self._hass.async_add_executor_job(save_yaml, self._hass.data[INTEGRATION][CONF_SETTINGS_CONFIG_PATH], self._hass.data[INTEGRATION][DATA_HAVCS_SETTINGS])
+                    # save_yaml(self._hass.data[INTEGRATION][CONF_SETTINGS_CONFIG_PATH], self._hass.data[INTEGRATION][DATA_HAVCS_SETTINGS])
                     return self.json({ 'code': 'ok', 'Msg': '成功更新配置', 'data':settings})
                 except er.Invalid as e:
                     msg = '属性校验失败：' + e.msg + ' @ data'
@@ -343,13 +344,17 @@ class HavcsDeviceView(HomeAssistantView):
         self._hass = hass
         self._device_schema = device_schema
 
-        local = hass.config.path("custom_components/" + INTEGRATION + "/html")
+    async def async_init_panel(self):
+        local = self._hass.config.path("custom_components/" + INTEGRATION + "/html")
         if os.path.isdir(local):
-            hass.http.register_static_path('/havcs', local, False)
-        panels = hass.data.setdefault(DATA_PANELS, {})
+            # self._hass.http.register_static_path('/havcs', local, False)
+            await self._hass.http.async_register_static_paths([StaticPathConfig("/havcs", local, False)])
+        panels = self._hass.data.setdefault(DATA_PANELS, {})
         frontend_url_path = INTEGRATION+'_panel'
         if frontend_url_path not in panels:
-            hass.components.frontend.async_register_built_in_panel(
+            # hass.components.frontend.async_register_built_in_panel(
+            async_register_built_in_panel(
+                self._hass,
                 component_name = "iframe",
                 sidebar_title = 'HAVCS设备',
                 sidebar_icon = 'mdi:home-edit',
@@ -388,7 +393,8 @@ class HavcsDeviceView(HomeAssistantView):
         elif action == 'delete':
             device_id = req.get('device_id')
             self._hass.data[INTEGRATION][DATA_HAVCS_ITEMS].pop(device_id)
-            save_yaml(self._hass.data[INTEGRATION][CONF_DEVICE_CONFIG_PATH], self._hass.data[INTEGRATION][DATA_HAVCS_ITEMS])
+            await self._hass.async_add_executor_job(save_yaml, self._hass.data[INTEGRATION][CONF_DEVICE_CONFIG_PATH], self._hass.data[INTEGRATION][DATA_HAVCS_ITEMS])
+            # save_yaml(self._hass.data[INTEGRATION][CONF_DEVICE_CONFIG_PATH], self._hass.data[INTEGRATION][DATA_HAVCS_ITEMS])
             return self.json({ 'code': 'ok', 'Msg': '成功删除设备', 'data':{'device_id': device_id}})
         elif action == 'update':
             device = req.get('device')
@@ -398,7 +404,8 @@ class HavcsDeviceView(HomeAssistantView):
                     valid_device = self._device_schema({device_id: device})
                     self._hass.data[INTEGRATION][DATA_HAVCS_ITEMS].setdefault(device_id, {})
                     self._hass.data[INTEGRATION][DATA_HAVCS_ITEMS][device_id].update(device)
-                    save_yaml(self._hass.data[INTEGRATION][CONF_DEVICE_CONFIG_PATH], self._hass.data[INTEGRATION][DATA_HAVCS_ITEMS])
+                    await self._hass.async_add_executor_job(save_yaml, self._hass.data[INTEGRATION][CONF_DEVICE_CONFIG_PATH], self._hass.data[INTEGRATION][DATA_HAVCS_ITEMS])
+                    # save_yaml(self._hass.data[INTEGRATION][CONF_DEVICE_CONFIG_PATH], self._hass.data[INTEGRATION][DATA_HAVCS_ITEMS])
                     return self.json({ 'code': 'ok', 'Msg': '成功新增/更新设备', 'data':{'device_id': device_id}})
                 except er.Invalid as e:
                     _LOGGER.error(repr(e))
@@ -419,7 +426,8 @@ class HavcsDeviceView(HomeAssistantView):
             try:
                 device_config = yaml.load(upload_file.file, Loader=loader.PythonSafeLoader)
                 self._hass.data[INTEGRATION][DATA_HAVCS_ITEMS] = self._device_schema(device_config)
-                save_yaml(self._hass.data[INTEGRATION][CONF_DEVICE_CONFIG_PATH], self._hass.data[INTEGRATION][DATA_HAVCS_ITEMS])
+                await self._hass.async_add_executor_job(save_yaml, self._hass.data[INTEGRATION][CONF_DEVICE_CONFIG_PATH], self._hass.data[INTEGRATION][DATA_HAVCS_ITEMS])
+                # save_yaml(self._hass.data[INTEGRATION][CONF_DEVICE_CONFIG_PATH], self._hass.data[INTEGRATION][DATA_HAVCS_ITEMS])
                 return self.json({ 'code': 'ok', 'Msg': '成功导入设备'})
             except er.Invalid as e:
                 msg = '属性校验失败：' + e.msg + ' @ data'
@@ -457,8 +465,10 @@ class HavcsHttpManager:
     def register_auth_token(self):
         self._hass.http.register_view(HavcsTokenView(self._hass, self._ha_url, self._expiration))
 
-    def register_deivce_manager(self):
-        self._hass.http.register_view(HavcsDeviceView(self._hass, self._device_schema))
+    async def register_device_manager(self):
+        view = HavcsDeviceView(self._hass, self._device_schema)
+        await view.async_init_panel()
+        self._hass.http.register_view(view)
 
     def register_settings_manager(self):
         self._hass.http.register_view(HavcsSettingsView(self._hass,self._settings_schema))

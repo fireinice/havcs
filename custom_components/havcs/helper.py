@@ -265,7 +265,7 @@ class VoiceControlDeviceManager:
 
     async def async_reregister_devices(self, hass = None):
         # entity_registry = await hass.helpers.entity_registry.async_get_registry()
-        if MAJOR_VERSION >= 2024 and MINOR_VERSION > 5:
+        if (MAJOR_VERSION + 0.01 * MINOR_VERSION) >= 2024.05:
             device_registry = dr.async_get(hass)
         else:
             device_registry = hass.helpers.device_registry.async_get()

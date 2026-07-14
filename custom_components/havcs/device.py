@@ -67,7 +67,7 @@ class VoiceControllDevice:
     async def async_update_device_registry(self):
         """Update device registry."""
         # device_registry = await self.hass.helpers.device_registry.async_get_registry()
-        if MAJOR_VERSION >= 2024 and MINOR_VERSION > 5:
+        if (MAJOR_VERSION + 0.01 * MINOR_VERSION) >= 2024.05:
             device_registry = dr.async_get(self.hass)
         else:
             device_registry = self.hass.helpers.device_registry.async_get()

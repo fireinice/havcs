@@ -109,7 +109,7 @@ async def async_update_token_expiration(access_token, hass, expiration):
             unverif_claims = jwt.decode(
                 access_token, algorithms=["HS256"], options={"verify_signature": False}
             )
-        if MAJOR_VERSION >= 2024 and  MINOR_VERSION  > 1:
+        if (MAJOR_VERSION + 0.01 * MINOR_VERSION) >= 2024.01:
             refresh_token = hass.auth.async_get_refresh_token(cast(str, unverif_claims.get('iss')))
         else:
             refresh_token = await hass.auth.async_get_refresh_token(cast(str, unverif_claims.get('iss')))
