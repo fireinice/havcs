@@ -142,6 +142,12 @@ class PlatformParameter:
             'DecrementBrightnessPercentageRequest': lambda state, attributes, payload: (['light'], ['turn_on'], [{'brightness_pct': max(state.attributes['brightness'] / 255 * 100 - payload['deltaPercentage']['value'], 0)}]),
             'SetColorRequest': lambda state, attributes, payload: (['light'], ['turn_on'], [{'hs_color': [float(payload['color']['hue']), float(payload['color']['saturation']) * 100], 'brightness_pct': float(payload['color']['brightness']) * 100}])
         },
+        'climate': {
+            'SetModeRequest': lambda state, attributes, payload: (['climate'], ['set_hvac_mode'], [{"entity_id": state.entity_id, "hvac_mode": {'wind': 'fan_only', 'fan': 'fan_only', 'cold': 'cool', 'hot': 'heat'}.get(payload['mode']['value'].lower(), payload['mode']['value'].lower())}]),
+            'SetTemperatureRequest': lambda state, attributes, payload: (['climate'], ['set_temperature'], [{"entity_id": state.entity_id, "temperature": float(payload['targetTemperature']['value'])}]),
+            'IncrementTemperatureRequest': lambda state, attributes, payload: (['climate'], ['set_temperature'], [{"entity_id": state.entity_id, "temperature": state.attributes.get('temperature', 26) + float(payload['targetTemperature']['deltaValue'])}]),
+            'DecrementTemperatureRequest': lambda state, attributes, payload: (['climate'], ['set_temperature'], [{"entity_id": state.entity_id, "temperature": state.attributes.get('temperature', 26) - float(payload['targetTemperature']['deltaValue'])}]),
+        },
         'havcs':{
             'TurnOnRequest': lambda state, attributes, payload:([cmnd[0] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['turn_on']], [cmnd[1] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['turn_on']], [json.loads(cmnd[2]) for cmnd in attributes[ATTR_DEVICE_ACTIONS]['turn_on']]) if attributes.get(ATTR_DEVICE_ACTIONS) else (['input_boolean'], ['turn_on'], [{}]),
             'TurnOffRequest': lambda state, attributes, payload:([cmnd[0] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['turn_off']], [cmnd[1] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['turn_off']], [json.loads(cmnd[2]) for cmnd in attributes[ATTR_DEVICE_ACTIONS]['turn_off']]) if attributes.get(ATTR_DEVICE_ACTIONS) else (['input_boolean'], ['turn_off'], [{}]),
@@ -149,7 +155,6 @@ class PlatformParameter:
             'DecrementBrightnessPercentageRequest': lambda state, attributes, payload:([cmnd[0] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['decrease_brightness']], [cmnd[1] for cmnd in attributes[ATTR_DEVICE_ACTIONS]['decrease_brightness']], [json.loads(cmnd[2]) for cmnd in attributes[ATTR_DEVICE_ACTIONS]['decrease_brightness']]) if attributes.get(ATTR_DEVICE_ACTIONS) else (['input_boolean'], ['turn_on'], [{}]),
             'TimingTurnOnRequest': lambda state, attributes, payload: (['common_timer'], ['set'], [{'operation': 'custom:havcs_actions/timing_turn_on', 'duration': int(payload['timestamp']['value']) - int(time.time())}]),
             'TimingTurnOffRequest': lambda state, attributes, payload: (['common_timer'], ['set'], [{'operation': 'custom:havcs_actions/timing_turn_off', 'duration': int(payload['timestamp']['value']) - int(time.time())}]),
-            'SetModeRequest': lambda state, attributes, payload: (['climate'], ['set_hvac_mode'], [{"hvac_mode": payload['mode']['value'].lower()}])
         }
 
     }

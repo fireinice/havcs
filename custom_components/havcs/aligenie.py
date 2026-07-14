@@ -142,6 +142,12 @@ class PlatformParameter:
         'fan': {
             'SetMode': lambda state, attributes, payload: (['fan'], ['set_speed'], [{"speed": payload['value']}])
         },
+        'climate': {
+            'SetMode': lambda state, attributes, payload: (['climate'], ['set_hvac_mode'], [{"entity_id": state.entity_id, "hvac_mode": {'wind': 'fan_only', 'fan': 'fan_only', 'cold': 'cool', 'hot': 'heat'}.get(payload['value'].lower(), payload['value'].lower())}]),
+            'SetTemperature': lambda state, attributes, payload: (['climate'], ['set_temperature'], [{"entity_id": state.entity_id, "temperature": float(payload['value'])}]),
+            'AdjustUpTemperature': lambda state, attributes, payload: (['climate'], ['set_temperature'], [{"entity_id": state.entity_id, "temperature": state.attributes.get('temperature', 26) + float(payload['value'])}]),
+            'AdjustDownTemperature': lambda state, attributes, payload: (['climate'], ['set_temperature'], [{"entity_id": state.entity_id, "temperature": state.attributes.get('temperature', 26) - float(payload['value'])}]),
+        },
         'cover': {
             'TurnOn':  'open_cover',
             'TurnOff': 'close_cover',
